@@ -1,9 +1,8 @@
-package com.example.parttwo.Presentation
+package com.example.parttwo.Presentation.Signup
 
 import android.annotation.SuppressLint
-import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +22,7 @@ import androidx.compose.material3.Button
 //import androidx.compose.material.icons.filled.Visibility
 //import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,14 +31,17 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -46,22 +49,22 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.parttwo.R
+import kotlinx.coroutines.launch
 
 @SuppressLint("UnrememberedMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AuthenticationTemplate(
-    intro : String,
-    buttonText : String,
-    otherScreen : String,
-    isSignupScreen:Boolean
+fun SignupScreen(
+    viewModel: SignupViewModel = hiltViewModel()
 ) {
 
-    var username by remember {
+    var email by remember {
         mutableStateOf("")
     }
 
@@ -69,12 +72,16 @@ fun AuthenticationTemplate(
         mutableStateOf("")
     }
 
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val state = viewModel.signUpState.collectAsState(initial = null)
+
     var isPasswordVisible by remember {
         mutableStateOf(false)
     }
 
     val isFormValid by derivedStateOf {
-        username.isNotBlank() && password.length >= 7
+        email.isNotBlank() && password.length >= 7
     }
 
     Column(
@@ -90,7 +97,7 @@ fun AuthenticationTemplate(
                 .size(200.dp),
 //            colorFilter = ColorFilter.tint(Color.White)
         )
-        
+
         Card(
             modifier = Modifier
                 .weight(2f)
@@ -104,7 +111,7 @@ fun AuthenticationTemplate(
                     .padding(32.dp)
             ) {
                 Text(
-                    text = intro,
+                    text = "Hello there!",
                     fontWeight = FontWeight.Bold,
                     fontSize = 32.sp,
                     color = colorResource(id = R.color.text_medium),
@@ -120,13 +127,17 @@ fun AuthenticationTemplate(
 
                     OutlinedTextField(
                         modifier = Modifier.fillMaxWidth(),
-                        value = username,
+                        value = email,
                         textStyle = MaterialTheme.typography.bodyMedium,
-                        onValueChange = {username = it} ,
-                        label = { Text(text = "Username")},
+                        onValueChange = {email = it} ,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Done
+                        ),
+                        label = { Text(text = "Email")},
                         trailingIcon = {
-                            if (username.isNotBlank()){
-                                IconButton(onClick = { username = "" }) {
+                            if (email.isNotBlank()){
+                                IconButton(onClick = { email = "" }) {
                                     Icon(imageVector = Icons.Filled.Clear, contentDescription = "Clear field icon")
                                 }
                             }
@@ -157,43 +168,66 @@ fun AuthenticationTemplate(
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     Button(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = isFormValid,
                         shape = RoundedCornerShape(16.dp)
                         ,onClick = {
-
+                            scope.launch {
+                                viewModel.registerUser(email, password )
+                            }
                         }
                     ) {
                         Text(
-                            text = buttonText,
+                            text = "Sign up",
                             style = MaterialTheme.typography.bodyMedium,
                             color = colorResource(id = R.color.text_medium)
                         )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        if (state.value?.isLoading == true){
+                            CircularProgressIndicator()
+                        }
                     }
 
                     Spacer(modifier = Modifier.weight(1f))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (!isSignupScreen) Arrangement.SpaceBetween else Arrangement.Center
-                        ) {
+                        horizontalArrangement = Arrangement.Center
+                    ) {
                         TextButton( onClick = { /*TODO*/ }) {
-                             Text(
-                                 text = otherScreen,
-                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                                 color = MaterialTheme.colorScheme.primary
-                             )
+                            Text(
+                                text = "Already have an account? Log in",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
 
-                        if (!isSignupScreen){
-                            TextButton(onClick = { /*TODO*/ }) {
-                                Text(
-                                    text = "Forgot Password?",
-                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                                    color = Color.Gray
-                                )
+
+
+                    }
+
+                    LaunchedEffect(key1 = state.value?.isSuccess){
+                        scope.launch {
+                            if (state.value?.isSuccess?.isNotEmpty() == true){
+                                val success = state.value?.isSuccess
+                                Toast.makeText(context,"$success" , Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                    
+                    LaunchedEffect(key1 = state.value?.isError){
+                        scope.launch {
+                            if (state.value?.isError?.isNotEmpty() == true){
+                                val error = state.value?.isError
+                                Toast.makeText(context,"$error" , Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
@@ -205,13 +239,3 @@ fun AuthenticationTemplate(
 
 }
 
-@Preview
-@Composable
-fun SigninPreview(){
-    AuthenticationTemplate(
-        "Welcome back!",
-        "Log in",
-        "Sign up",
-        false
-    )
-}
